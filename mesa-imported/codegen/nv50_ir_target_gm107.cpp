@@ -288,10 +288,29 @@ getDualIssueClass(const Instruction *insn)
    }
 }
 
+static bool
+readsConstantBank(const Instruction *insn)
+{
+   for (int s = 0; insn->srcExists(s); ++s)
+      if (insn->src(s).getFile() == FILE_MEMORY_CONST)
+         return true;
+   return false;
+}
+
 bool
 TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
 {
    if (!a->canCommuteDefDef(b) || !a->canCommuteDefSrc(b))
+      return false;
+
+   // The pair issues together and latches its operands in the same cycle, so b must not define
+   // anything a sources either.
+   if (!b->canCommuteDefSrc(a))
+      return false;
+
+   // The pair shares a single constant cache read port, so only one of the two may take a
+   // constant bank operand. Violating this silently returns garbage for one of the reads.
+   if (readsConstantBank(a) && readsConstantBank(b))
       return false;
 
    DualIssueClass ac = getDualIssueClass(a);
