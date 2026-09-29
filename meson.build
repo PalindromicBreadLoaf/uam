@@ -8,10 +8,12 @@ prog_python = import('python3').find_python()
 has_mako = run_command(
 	prog_python, '-c',
 	'''
-from distutils.version import StrictVersion
 import mako
-assert StrictVersion(mako.__version__) > StrictVersion("0.8.0")
-	''')
+parts = tuple(int(x) for x in mako.__version__.split('.')[:3])
+assert parts >= (0, 8, 0)
+	''',
+	check: false,
+)
 if has_mako.returncode() != 0
 	error('Python (3.x) mako module >= 0.8.0 required to build uam.')
 endif
